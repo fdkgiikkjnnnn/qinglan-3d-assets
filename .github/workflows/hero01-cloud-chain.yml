@@ -1,0 +1,149 @@
+name: Hero01 Cloud Chain
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/hero01-cloud-chain.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Gradio client
+        run: python -m pip install --upgrade "gradio_client>=1.3,<2" pillow
+
+      - name: Generate Hero01 reference then 3D
+        run: |
+          python - <<'PY'
+          import pathlib, shutil, traceback
+          from PIL import Image
+          from gradio_client import Client, handle_file
+
+          refs = pathlib.Path("refs")
+          models = pathlib.Path("models/hero01")
+          refs.mkdir(parents=True, exist_ok=True)
+          models.mkdir(parents=True, exist_ok=True)
+
+          prompt = (
+              "full body front view of a 24 year old East Asian male xianxia sword cultivator, "
+              "adult normal human proportions, tall slender athletic build, long black hair half-up high topknot, "
+              "pale jade green hair ribbon, calm refined face, white and moon-white outer robes, "
+              "blue gray inner robes, black waist belt, subtle jade ornaments, black boots, "
+              "modern elegant Chinese xianxia costume, realistic high detail game character concept, "
+              "neutral standing A-pose with both arms slightly away from torso, empty hands, NO sword, NO weapon, "
+              "NO props, NO scenery, isolated single character, pure white seamless studio background, "
+              "even front lighting, entire body visible from head to boots, centered, no text"
+          )
+
+          print("=== FLUX reference generation ===")
+          flux = Client("black-forest-labs/FLUX.1-schnell")
+          flux_result = None
+          errors = []
+          for api_name in ("/infer", "/predict", None):
+              try:
+                  print("Trying FLUX endpoint", api_name)
+                  kwargs = dict(
+                      prompt=prompt,
+                      seed=13579,
+                      randomize_seed=False,
+                      width=768,
+                      height=1024,
+                      num_inference_steps=4,
+                  )
+                  if api_name:
+                      flux_result = flux.predict(api_name=api_name, **kwargs)
+                  else:
+                      flux_result = flux.predict(**kwargs)
+                  print("FLUX result:", flux_result)
+                  break
+              except Exception as e:
+                  traceback.print_exc()
+                  errors.append(f"{api_name}: {e}")
+          if flux_result is None:
+              raise SystemExit("FLUX failed:\n" + "\n".join(errors))
+
+          candidate = flux_result[0] if isinstance(flux_result, (tuple, list)) else flux_result
+          if isinstance(candidate, dict):
+              candidate = candidate.get("path") or candidate.get("value")
+          if hasattr(candidate, "name"):
+              candidate = candidate.name
+          if not candidate:
+              raise SystemExit(f"No FLUX image path: {flux_result!r}")
+
+          src_img = pathlib.Path(str(candidate))
+          if not src_img.exists():
+              raise SystemExit(f"FLUX image missing: {src_img}")
+
+          clean_png = refs / "hero01_cloud_ref.png"
+          with Image.open(src_img) as im:
+              im.convert("RGB").save(clean_png, "PNG")
+          print("Saved reference:", clean_png, clean_png.stat().st_size)
+
+          print("=== Hunyuan3D shape generation ===")
+          target = models / "hero01_cloud_shape.glb"
+          attempts = [
+              ("WorldzTech/Hunyuan3D-2.1-Demo", "/generate", dict(
+                  image=handle_file(str(clean_png)),
+                  textured=False,
+                  steps=30,
+                  guidance_scale=5.0,
+                  octree_resolution=256,
+                  seed=24680,
+                  randomize_seed=False,
+                  remove_background=True,
+              )),
+              ("tencent/Hunyuan3D-2.1", "/shape_generation", dict(
+                  image=handle_file(str(clean_png)),
+                  steps=30,
+                  guidance_scale=5.0,
+                  seed=24680,
+                  octree_resolution=256,
+                  check_box_rembg=True,
+                  randomize_seed=False,
+              )),
+          ]
+
+          h_errors = []
+          for space, api_name, kwargs in attempts:
+              try:
+                  print("Trying", space, api_name)
+                  client = Client(space)
+                  result = client.predict(api_name=api_name, **kwargs)
+                  print("Hunyuan result:", result)
+                  model = result[0] if isinstance(result, (list, tuple)) and result else result
+                  if isinstance(model, dict):
+                      model = model.get("path") or model.get("value")
+                  if hasattr(model, "name"):
+                      model = model.name
+                  model_path = pathlib.Path(str(model)) if model else None
+                  if model_path and model_path.exists():
+                      shutil.copy2(model_path, target)
+                      print("Saved model:", target, target.stat().st_size)
+                      break
+                  raise RuntimeError(f"No usable model path: {model!r}")
+              except Exception as e:
+                  traceback.print_exc()
+                  h_errors.append(f"{space}: {e}")
+          else:
+              raise SystemExit("Hunyuan failed:\n" + "\n".join(h_errors))
+
+          if target.stat().st_size < 10000:
+              raise SystemExit("Generated GLB too small")
+          PY
+
+      - name: Commit generated reference and GLB
+        run: |
+          git config user.name "qinglan-3d-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add refs/hero01_cloud_ref.png models/hero01/hero01_cloud_shape.glb
+          git diff --cached --quiet && exit 0
+          git commit -m "asset: generate Hero01 cloud reference and GLB"
+          git push
