@@ -20,7 +20,7 @@ jobs:
       - name: Install Blender
         run: |
           sudo apt-get update
-          sudo apt-get install -y blender
+          sudo apt-get install -y blender python3-numpy
           blender --version
       - name: Build rig, animations and sword
         run: blender -b --python tools/rig_and_animate.py
