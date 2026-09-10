@@ -32,22 +32,67 @@ cx=(minx+maxx)/2; cy=(miny+maxy)/2
 w=maxx-minx; h=maxz-minz; d=maxy-miny
 print("bounds",minx,maxx,miny,maxy,minz,maxz,"w/h/d",w,h,d)
 
-# Project the matching T-pose reference onto the generated mesh as a lightweight color texture.
-# This is a real mesh texture, not a 2D sprite: UVs live on the 3D surface and export inside GLB.
+# Project the matching T-pose reference only onto front-facing mesh surfaces.
+# Side/back surfaces use coherent xianxia palette materials instead of wrapping the face around the body.
 uv = mesh.data.uv_layers.get("Hero01UV") or mesh.data.uv_layers.new(name="Hero01UV")
 for loop in mesh.data.loops:
     co = mesh.data.vertices[loop.vertex_index].co
     u = max(0.0, min(1.0, (co.x-minx)/(w if w else 1.0)))
     v = max(0.0, min(1.0, (co.z-minz)/(h if h else 1.0)))
     uv.data[loop.index].uv = (u, v)
-hero_mat=bpy.data.materials.new("Hero01ProjectedColor")
-hero_mat.use_nodes=True
-bsdf=hero_mat.node_tree.nodes.get("Principled BSDF")
-bsdf.inputs["Roughness"].default_value=.72
+
+def pbr(name, rgba, rough=.72, metallic=0.0):
+    m=bpy.data.materials.new(name)
+    m.use_nodes=True
+    bs=m.node_tree.nodes.get("Principled BSDF")
+    bs.inputs["Base Color"].default_value=rgba
+    bs.inputs["Roughness"].default_value=rough
+    bs.inputs["Metallic"].default_value=metallic
+    return m
+
+front_mat=bpy.data.materials.new("Hero01FrontReference")
+front_mat.use_nodes=True
+bsdf=front_mat.node_tree.nodes.get("Principled BSDF")
+bsdf.inputs["Roughness"].default_value=.68
 img=bpy.data.images.load("refs/hero01_tpose_ref.png")
-tex=hero_mat.node_tree.nodes.new("ShaderNodeTexImage"); tex.image=img; tex.interpolation='Linear'
-hero_mat.node_tree.links.new(tex.outputs["Color"],bsdf.inputs["Base Color"])
-mesh.data.materials.clear(); mesh.data.materials.append(hero_mat)
+tex=front_mat.node_tree.nodes.new("ShaderNodeTexImage")
+tex.image=img
+tex.interpolation='Linear'
+front_mat.node_tree.links.new(tex.outputs["Color"],bsdf.inputs["Base Color"])
+
+robe_mat=pbr("MoonWhiteRobe",(0.78,0.82,0.81,1),.82)
+inner_mat=pbr("JadeBlueInner",(0.20,0.31,0.33,1),.76)
+dark_mat=pbr("BlackBeltBoots",(0.035,0.045,0.045,1),.60)
+hair_mat=pbr("LongBlackHair",(0.025,0.022,0.020,1),.52)
+skin_mat=pbr("Skin",(0.58,0.39,0.31,1),.72)
+
+mesh.data.materials.clear()
+for m in [front_mat,robe_mat,inner_mat,dark_mat,hair_mat,skin_mat]:
+    mesh.data.materials.append(m)
+
+# Hunyuan character front points toward +Y after Blender glTF import.
+# Only forward-facing polygons receive the reference; the rest receive stable 3D materials.
+for poly in mesh.data.polygons:
+    cen=sum((mesh.data.vertices[i].co for i in poly.vertices), Vector())/len(poly.vertices)
+    fz=(cen.z-minz)/(h if h else 1.0)
+    xn=abs(cen.x-cx)/(w if w else 1.0)
+    ny=poly.normal.y
+    if ny > .32:
+        poly.material_index=0
+    elif fz < .13:
+        poly.material_index=3
+    elif fz > .82:
+        poly.material_index=4
+    elif ny < -.25 and fz > .43 and xn < .18:
+        poly.material_index=4
+    elif .63 < fz < .80 and xn > .36:
+        poly.material_index=5
+    elif .22 < fz < .74 and xn < .12:
+        poly.material_index=2
+    elif .43 < fz < .58 and xn > .18:
+        poly.material_index=3
+    else:
+        poly.material_index=1
 
 # armature
 bpy.ops.object.armature_add(enter_editmode=True, location=(0,0,0))
