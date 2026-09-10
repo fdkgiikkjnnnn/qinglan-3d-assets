@@ -183,21 +183,21 @@ def make_action(name, end, frames):
     return act
 
 idle=[
-(1,{"Chest":(0,0,-1.5),"LeftUpperArm":(-68,0,-4),"RightUpperArm":(68,0,4),"LeftLowerArm":(-8,0,0),"RightLowerArm":(8,0,0)},{"Hips":(0,0,0)}),
-(30,{"Chest":(1.2,0,1.5),"LeftUpperArm":(-70,0,-5),"RightUpperArm":(70,0,5),"LeftLowerArm":(-10,0,0),"RightLowerArm":(10,0,0)},{"Hips":(0,0,.012)}),
-(60,{"Chest":(0,0,-1.5),"LeftUpperArm":(-68,0,-4),"RightUpperArm":(68,0,4),"LeftLowerArm":(-8,0,0),"RightLowerArm":(8,0,0)},{"Hips":(0,0,0)})]
+(1,{"Chest":(0,0,-1.5),"LeftUpperArm":(-68,0,-4),"RightUpperArm":(-68,0,4),"LeftLowerArm":(-8,0,0),"RightLowerArm":(-8,0,0)},{"Hips":(0,0,0)}),
+(30,{"Chest":(1.2,0,1.5),"LeftUpperArm":(-70,0,-5),"RightUpperArm":(-70,0,5),"LeftLowerArm":(-10,0,0),"RightLowerArm":(-10,0,0)},{"Hips":(0,0,.012)}),
+(60,{"Chest":(0,0,-1.5),"LeftUpperArm":(-68,0,-4),"RightUpperArm":(-68,0,4),"LeftLowerArm":(-8,0,0),"RightLowerArm":(-8,0,0)},{"Hips":(0,0,0)})]
 run=[
-(1,{"LeftUpperLeg":(30,0,0),"RightUpperLeg":(-30,0,0),"LeftLowerLeg":(-18,0,0),"RightLowerLeg":(35,0,0),"LeftUpperArm":(-58,0,-28),"RightUpperArm":(58,0,28),"Chest":(5,0,0)},{"Hips":(0,0,.03)}),
-(8,{"LeftUpperLeg":(0,0,0),"RightUpperLeg":(0,0,0),"LeftLowerLeg":(25,0,0),"RightLowerLeg":(25,0,0),"LeftUpperArm":(-68,0,-10),"RightUpperArm":(68,0,10)},{"Hips":(0,0,.0)}),
-(15,{"LeftUpperLeg":(-30,0,0),"RightUpperLeg":(30,0,0),"LeftLowerLeg":(35,0,0),"RightLowerLeg":(-18,0,0),"LeftUpperArm":(-78,0,25),"RightUpperArm":(78,0,-25),"Chest":(5,0,0)},{"Hips":(0,0,.03)}),
-(22,{"LeftUpperLeg":(0,0,0),"RightUpperLeg":(0,0,0),"LeftLowerLeg":(25,0,0),"RightLowerLeg":(25,0,0),"LeftUpperArm":(0,0,-10),"RightUpperArm":(0,0,10)},{"Hips":(0,0,0)}),
-(29,{"LeftUpperLeg":(30,0,0),"RightUpperLeg":(-30,0,0),"LeftLowerLeg":(-18,0,0),"RightLowerLeg":(35,0,0),"LeftUpperArm":(-25,0,-18),"RightUpperArm":(25,0,18),"Chest":(5,0,0)},{"Hips":(0,0,.03)})]
+(1,{"LeftUpperLeg":(30,0,0),"RightUpperLeg":(-30,0,0),"LeftLowerLeg":(-18,0,0),"RightLowerLeg":(35,0,0),"LeftUpperArm":(-55,0,-25),"RightUpperArm":(-80,0,25),"Chest":(5,0,0)},{"Hips":(0,0,.03)}),
+(8,{"LeftUpperLeg":(0,0,0),"RightUpperLeg":(0,0,0),"LeftLowerLeg":(25,0,0),"RightLowerLeg":(25,0,0),"LeftUpperArm":(-68,0,-8),"RightUpperArm":(-68,0,8)},{"Hips":(0,0,0)}),
+(15,{"LeftUpperLeg":(-30,0,0),"RightUpperLeg":(30,0,0),"LeftLowerLeg":(35,0,0),"RightLowerLeg":(-18,0,0),"LeftUpperArm":(-80,0,25),"RightUpperArm":(-55,0,-25),"Chest":(5,0,0)},{"Hips":(0,0,.03)}),
+(22,{"LeftUpperLeg":(0,0,0),"RightUpperLeg":(0,0,0),"LeftLowerLeg":(25,0,0),"RightLowerLeg":(25,0,0),"LeftUpperArm":(-68,0,-8),"RightUpperArm":(-68,0,8)},{"Hips":(0,0,0)}),
+(29,{"LeftUpperLeg":(30,0,0),"RightUpperLeg":(-30,0,0),"LeftLowerLeg":(-18,0,0),"RightLowerLeg":(35,0,0),"LeftUpperArm":(-55,0,-25),"RightUpperArm":(-80,0,25),"Chest":(5,0,0)},{"Hips":(0,0,.03)})]
 attack=[
-(1,{"RightUpperArm":(-10,-20,18),"RightLowerArm":(0,0,-25),"Chest":(0,0,-8)},{}),
-(8,{"RightUpperArm":(-35,-45,35),"RightLowerArm":(0,0,-50),"Chest":(0,0,-20)},{}),
-(14,{"RightUpperArm":(55,25,-55),"RightLowerArm":(0,0,20),"Chest":(5,0,32),"Hips":(0,0,10)},{}),
-(22,{"RightUpperArm":(-5,-10,15),"RightLowerArm":(0,0,-10),"Chest":(0,0,-5)},{}),
-(30,{"RightUpperArm":(0,0,10),"RightLowerArm":(0,0,0),"Chest":(0,0,0)}, {})]
+(1,{"LeftUpperArm":(-68,0,-4),"RightUpperArm":(-55,-15,20),"RightLowerArm":(-20,0,-20),"Chest":(0,0,-8)},{}),
+(8,{"LeftUpperArm":(-68,0,-4),"RightUpperArm":(-20,-35,45),"RightLowerArm":(-35,0,-35),"Chest":(0,0,-20)},{}),
+(14,{"LeftUpperArm":(-68,0,-4),"RightUpperArm":(-55,25,-50),"RightLowerArm":(10,0,15),"Chest":(5,0,32),"Hips":(0,0,10)},{}),
+(22,{"LeftUpperArm":(-68,0,-4),"RightUpperArm":(-65,-10,15),"RightLowerArm":(-12,0,-10),"Chest":(0,0,-5)},{}),
+(30,{"LeftUpperArm":(-68,0,-4),"RightUpperArm":(-68,0,4),"RightLowerArm":(-8,0,0),"Chest":(0,0,0)}, {})]
 make_action("Idle",60,idle)
 make_action("Run",29,run)
 make_action("Attack",30,attack)
