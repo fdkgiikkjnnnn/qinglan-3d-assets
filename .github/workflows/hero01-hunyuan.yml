@@ -1,0 +1,103 @@
+name: Hero01 Hunyuan3D ZeroGPU
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "refs/hero01_front.jpg"
+      - ".github/workflows/hero01-hunyuan.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install client
+        run: python -m pip install --upgrade "gradio_client>=1.3,<2"
+
+      - name: Generate Hero01 GLB on Hugging Face ZeroGPU
+        env:
+          INPUT_URL: https://raw.githubusercontent.com/fdkgiikkjnnnn/qinglan-3d-assets/main/refs/hero01_front.jpg
+        run: |
+          python - <<'PY'
+          import os, shutil, pathlib, traceback
+          from gradio_client import Client, handle_file
+
+          url = os.environ["INPUT_URL"]
+          outdir = pathlib.Path("models/hero01")
+          outdir.mkdir(parents=True, exist_ok=True)
+          target = outdir / "hero01_shape.glb"
+
+          attempts = [
+              ("WorldzTech/Hunyuan3D-2.1-Demo", "/generate", dict(
+                  image=handle_file(url),
+                  textured=False,
+                  steps=30,
+                  guidance_scale=5.0,
+                  octree_resolution=256,
+                  seed=1234,
+                  randomize_seed=False,
+                  remove_background=True,
+              )),
+              ("tencent/Hunyuan3D-2.1", "/shape_generation", dict(
+                  image=handle_file(url),
+                  steps=30,
+                  guidance_scale=5.0,
+                  seed=1234,
+                  octree_resolution=256,
+                  check_box_rembg=True,
+                  randomize_seed=False,
+              )),
+          ]
+
+          errors = []
+          for space, api_name, kwargs in attempts:
+              try:
+                  print(f"Trying {space} {api_name}")
+                  client = Client(space, hf_token=os.environ.get("HF_TOKEN") or None)
+                  result = client.predict(api_name=api_name, **kwargs)
+                  print("Result:", result)
+
+                  candidate = None
+                  if isinstance(result, (list, tuple)):
+                      # WorldzTech /generate -> first item is mesh.
+                      # Tencent /shape_generation -> first item is mesh.
+                      candidate = result[0] if result else None
+                  else:
+                      candidate = result
+
+                  if isinstance(candidate, dict):
+                      candidate = candidate.get("value") or candidate.get("path")
+                  if hasattr(candidate, "name"):
+                      candidate = candidate.name
+
+                  if candidate and pathlib.Path(str(candidate)).exists():
+                      shutil.copy2(str(candidate), target)
+                      print(f"Saved {target} ({target.stat().st_size} bytes)")
+                      break
+
+                  raise RuntimeError(f"No usable GLB path returned: {candidate!r}")
+              except Exception as e:
+                  traceback.print_exc()
+                  errors.append(f"{space}: {e}")
+          else:
+              raise SystemExit("All ZeroGPU attempts failed:\n" + "\n".join(errors))
+
+          if target.stat().st_size < 10000:
+              raise SystemExit("Generated GLB is unexpectedly small")
+          PY
+
+      - name: Commit generated GLB
+        run: |
+          git config user.name "qinglan-3d-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add models/hero01/hero01_shape.glb
+          git diff --cached --quiet && exit 0
+          git commit -m "asset: generate Hero01 Hunyuan3D shape"
+          git push
