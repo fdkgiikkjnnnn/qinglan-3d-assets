@@ -1,0 +1,50 @@
+name: Find CC0 Validation Character
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/find-cc0-character.yml"
+  workflow_dispatch:
+
+jobs:
+  search:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Search 3DAssets.dev for usable characters
+        run: |
+          python - <<'PY'
+          import json, urllib.parse, urllib.request
+          terms=["samurai","warrior","swordsman","monk","wizard","male hero","historical male","fantasy male"]
+          rows=[]
+          for q in terms:
+              url="https://3dassets.dev/api/v1/assets?"+urllib.parse.urlencode({
+                  "q":q,"category":"characters","sort":"relevance","limit":20
+              })
+              print("\nQUERY",q,url)
+              with urllib.request.urlopen(url,timeout=30) as r:
+                  data=json.load(r)
+              items=data.get("assets") or data.get("items") or data.get("data") or []
+              for a in items[:20]:
+                  row={
+                    "q":q,
+                    "id":a.get("id"),
+                    "slug":a.get("slug"),
+                    "title":a.get("title"),
+                    "summary":a.get("summary"),
+                    "theme":a.get("theme"),
+                    "style":a.get("style"),
+                    "tags":a.get("tags"),
+                    "cdnUrl":a.get("cdnUrl") or a.get("cdn_url"),
+                    "downloadUrl":a.get("downloadUrl") or a.get("download_url"),
+                  }
+                  print(json.dumps(row,ensure_ascii=False))
+                  rows.append(row)
+          open("/tmp/candidates.json","w").write(json.dumps(rows,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cc0-character-candidates
+          path: /tmp/candidates.json
+          retention-days: 1
