@@ -32,6 +32,23 @@ cx=(minx+maxx)/2; cy=(miny+maxy)/2
 w=maxx-minx; h=maxz-minz; d=maxy-miny
 print("bounds",minx,maxx,miny,maxy,minz,maxz,"w/h/d",w,h,d)
 
+# Project the matching T-pose reference onto the generated mesh as a lightweight color texture.
+# This is a real mesh texture, not a 2D sprite: UVs live on the 3D surface and export inside GLB.
+uv = mesh.data.uv_layers.get("Hero01UV") or mesh.data.uv_layers.new(name="Hero01UV")
+for loop in mesh.data.loops:
+    co = mesh.data.vertices[loop.vertex_index].co
+    u = max(0.0, min(1.0, (co.x-minx)/(w if w else 1.0)))
+    v = max(0.0, min(1.0, (co.z-minz)/(h if h else 1.0)))
+    uv.data[loop.index].uv = (u, v)
+hero_mat=bpy.data.materials.new("Hero01ProjectedColor")
+hero_mat.use_nodes=True
+bsdf=hero_mat.node_tree.nodes.get("Principled BSDF")
+bsdf.inputs["Roughness"].default_value=.72
+img=bpy.data.images.load("refs/hero01_tpose_ref.png")
+tex=hero_mat.node_tree.nodes.new("ShaderNodeTexImage"); tex.image=img; tex.interpolation='Linear'
+hero_mat.node_tree.links.new(tex.outputs["Color"],bsdf.inputs["Base Color"])
+mesh.data.materials.clear(); mesh.data.materials.append(hero_mat)
+
 # armature
 bpy.ops.object.armature_add(enter_editmode=True, location=(0,0,0))
 arm=bpy.context.object
@@ -166,13 +183,13 @@ def make_action(name, end, frames):
     return act
 
 idle=[
-(1,{"Chest":(0,0,-1.5),"LeftUpperArm":(0,0,-10),"RightUpperArm":(0,0,10)},{"Hips":(0,0,0)}),
-(30,{"Chest":(1.2,0,1.5),"LeftUpperArm":(1,0,-12),"RightUpperArm":(-1,0,12)},{"Hips":(0,0,.012)}),
-(60,{"Chest":(0,0,-1.5),"LeftUpperArm":(0,0,-10),"RightUpperArm":(0,0,10)},{"Hips":(0,0,0)})]
+(1,{"Chest":(0,0,-1.5),"LeftUpperArm":(-68,0,-4),"RightUpperArm":(68,0,4),"LeftLowerArm":(-8,0,0),"RightLowerArm":(8,0,0)},{"Hips":(0,0,0)}),
+(30,{"Chest":(1.2,0,1.5),"LeftUpperArm":(-70,0,-5),"RightUpperArm":(70,0,5),"LeftLowerArm":(-10,0,0),"RightLowerArm":(10,0,0)},{"Hips":(0,0,.012)}),
+(60,{"Chest":(0,0,-1.5),"LeftUpperArm":(-68,0,-4),"RightUpperArm":(68,0,4),"LeftLowerArm":(-8,0,0),"RightLowerArm":(8,0,0)},{"Hips":(0,0,0)})]
 run=[
-(1,{"LeftUpperLeg":(30,0,0),"RightUpperLeg":(-30,0,0),"LeftLowerLeg":(-18,0,0),"RightLowerLeg":(35,0,0),"LeftUpperArm":(-25,0,-18),"RightUpperArm":(25,0,18),"Chest":(5,0,0)},{"Hips":(0,0,.03)}),
-(8,{"LeftUpperLeg":(0,0,0),"RightUpperLeg":(0,0,0),"LeftLowerLeg":(25,0,0),"RightLowerLeg":(25,0,0),"LeftUpperArm":(0,0,-10),"RightUpperArm":(0,0,10)},{"Hips":(0,0,.0)}),
-(15,{"LeftUpperLeg":(-30,0,0),"RightUpperLeg":(30,0,0),"LeftLowerLeg":(35,0,0),"RightLowerLeg":(-18,0,0),"LeftUpperArm":(25,0,-18),"RightUpperArm":(-25,0,18),"Chest":(5,0,0)},{"Hips":(0,0,.03)}),
+(1,{"LeftUpperLeg":(30,0,0),"RightUpperLeg":(-30,0,0),"LeftLowerLeg":(-18,0,0),"RightLowerLeg":(35,0,0),"LeftUpperArm":(-58,0,-28),"RightUpperArm":(58,0,28),"Chest":(5,0,0)},{"Hips":(0,0,.03)}),
+(8,{"LeftUpperLeg":(0,0,0),"RightUpperLeg":(0,0,0),"LeftLowerLeg":(25,0,0),"RightLowerLeg":(25,0,0),"LeftUpperArm":(-68,0,-10),"RightUpperArm":(68,0,10)},{"Hips":(0,0,.0)}),
+(15,{"LeftUpperLeg":(-30,0,0),"RightUpperLeg":(30,0,0),"LeftLowerLeg":(35,0,0),"RightLowerLeg":(-18,0,0),"LeftUpperArm":(-78,0,25),"RightUpperArm":(78,0,-25),"Chest":(5,0,0)},{"Hips":(0,0,.03)}),
 (22,{"LeftUpperLeg":(0,0,0),"RightUpperLeg":(0,0,0),"LeftLowerLeg":(25,0,0),"RightLowerLeg":(25,0,0),"LeftUpperArm":(0,0,-10),"RightUpperArm":(0,0,10)},{"Hips":(0,0,0)}),
 (29,{"LeftUpperLeg":(30,0,0),"RightUpperLeg":(-30,0,0),"LeftLowerLeg":(-18,0,0),"RightLowerLeg":(35,0,0),"LeftUpperArm":(-25,0,-18),"RightUpperArm":(25,0,18),"Chest":(5,0,0)},{"Hips":(0,0,.03)})]
 attack=[
