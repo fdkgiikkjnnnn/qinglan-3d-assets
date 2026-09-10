@@ -1,0 +1,25 @@
+name: Export Hero01 GLB
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/export-hero01.yml"
+  workflow_dispatch:
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Hero01 GLB
+        run: |
+          test -f models/hero01/hero01_shape.glb
+          ls -lh models/hero01/hero01_shape.glb
+      - name: Upload Hero01 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hero01-shape
+          path: models/hero01/hero01_shape.glb
+          compression-level: 0
+          retention-days: 1
