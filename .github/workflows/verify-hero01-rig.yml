@@ -40,3 +40,5 @@ jobs:
           print("skins",len(skins),"joints",joints)
           print("nodes",len(nodes),"Sword_Blade",names.index("Sword_Blade"))
           PY
+
+# verify-latest-pose
