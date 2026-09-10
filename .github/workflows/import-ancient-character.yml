@@ -20,7 +20,7 @@ jobs:
         run: |
           python -m pip install --upgrade gdown
           mkdir -p incoming/ancient
-          gdown --id 10INDgHs_jipfTXjGRVB2qtALIJpemoEY -O incoming/ancient/source.bin
+          gdown 'https://drive.google.com/uc?id=10INDgHs_jipfTXjGRVB2qtALIJpemoEY' -O incoming/ancient/source.bin
           file incoming/ancient/source.bin
           ls -lh incoming/ancient/source.bin
       - name: Extract source
