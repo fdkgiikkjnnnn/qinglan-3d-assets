@@ -1,0 +1,98 @@
+name: Hero01 V2 Hunyuan3D ZeroGPU
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "refs/hero01_v2_512.b64"
+      - ".github/workflows/hero01-v2-hunyuan.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore regenerated Hero01 reference
+        run: |
+          base64 -d refs/hero01_v2_512.b64 > refs/hero01_v2_512.jpg
+          file refs/hero01_v2_512.jpg
+          ls -lh refs/hero01_v2_512.jpg
+
+      - name: Install client
+        run: python -m pip install --upgrade "gradio_client>=1.3,<2"
+
+      - name: Generate Hero01 V2 GLB
+        run: |
+          python - <<'PY'
+          import pathlib, shutil, traceback
+          from gradio_client import Client, handle_file
+
+          source = pathlib.Path("refs/hero01_v2_512.jpg")
+          outdir = pathlib.Path("models/hero01")
+          outdir.mkdir(parents=True, exist_ok=True)
+          target = outdir / "hero01_v2_shape.glb"
+
+          attempts = [
+              ("WorldzTech/Hunyuan3D-2.1-Demo", "/generate", dict(
+                  image=handle_file(str(source)),
+                  textured=False,
+                  steps=30,
+                  guidance_scale=5.0,
+                  octree_resolution=256,
+                  seed=2468,
+                  randomize_seed=False,
+                  remove_background=True,
+              )),
+              ("tencent/Hunyuan3D-2.1", "/shape_generation", dict(
+                  image=handle_file(str(source)),
+                  steps=30,
+                  guidance_scale=5.0,
+                  seed=2468,
+                  octree_resolution=256,
+                  check_box_rembg=True,
+                  randomize_seed=False,
+              )),
+          ]
+
+          errors=[]
+          for space, api_name, kwargs in attempts:
+              try:
+                  print("Trying", space, api_name)
+                  client = Client(space)
+                  result = client.predict(api_name=api_name, **kwargs)
+                  print("Result:", result)
+                  candidate = result[0] if isinstance(result,(list,tuple)) and result else result
+                  if isinstance(candidate, dict):
+                      candidate = candidate.get("value") or candidate.get("path")
+                  if hasattr(candidate, "name"):
+                      candidate = candidate.name
+                  p = pathlib.Path(str(candidate)) if candidate else None
+                  if p and p.exists():
+                      shutil.copy2(p, target)
+                      print("Saved", target, target.stat().st_size)
+                      break
+                  raise RuntimeError(f"No usable model path: {candidate!r}")
+              except Exception as e:
+                  traceback.print_exc()
+                  errors.append(f"{space}: {e}")
+          else:
+              raise SystemExit("All attempts failed:\n" + "\n".join(errors))
+
+          if target.stat().st_size < 10000:
+              raise SystemExit("GLB too small")
+          PY
+
+      - name: Commit generated V2 GLB
+        run: |
+          git config user.name "qinglan-3d-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add models/hero01/hero01_v2_shape.glb
+          git diff --cached --quiet && exit 0
+          git commit -m "asset: generate Hero01 V2 Hunyuan3D shape"
+          git push
