@@ -1,4 +1,4 @@
-name: Export Hero01 GLB
+name: Export Hero01 T-Pose
 
 on:
   push:
@@ -12,17 +12,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify Hero01 cloud assets
+      - name: Verify T-pose assets
         run: |
-          test -f models/hero01/hero01_cloud_shape.glb
-          test -f refs/hero01_cloud_ref.png
-          ls -lh models/hero01/hero01_cloud_shape.glb refs/hero01_cloud_ref.png
-      - name: Upload Hero01 cloud artifact
+          test -f models/hero01/hero01_tpose_shape.glb
+          test -f refs/hero01_tpose_ref.png
+          ls -lh models/hero01/hero01_tpose_shape.glb refs/hero01_tpose_ref.png
+      - name: Upload T-pose artifact
         uses: actions/upload-artifact@v4
         with:
-          name: hero01-cloud
+          name: hero01-tpose
           path: |
-            models/hero01/hero01_cloud_shape.glb
-            refs/hero01_cloud_ref.png
+            models/hero01/hero01_tpose_shape.glb
+            refs/hero01_tpose_ref.png
           compression-level: 0
           retention-days: 1
