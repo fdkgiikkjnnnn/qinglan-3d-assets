@@ -1,0 +1,82 @@
+name: Import Free Ancient Rigged Character
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/import-ancient-character.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download free Mixamo-rigged Ancient character
+        run: |
+          python -m pip install --upgrade gdown
+          mkdir -p incoming/ancient
+          gdown --id 10INDgHs_jipfTXjGRVB2qtALIJpemoEY -O incoming/ancient/source.bin
+          file incoming/ancient/source.bin
+          ls -lh incoming/ancient/source.bin
+      - name: Extract source
+        run: |
+          set -eux
+          cd incoming/ancient
+          if file source.bin | grep -qi 'zip'; then unzip -o source.bin; fi
+          if file source.bin | grep -qi 'rar'; then sudo apt-get update && sudo apt-get install -y unrar && unrar x -o+ source.bin; fi
+          if file source.bin | grep -qi 'FBX'; then cp source.bin character.fbx; fi
+          find . -maxdepth 3 -type f -printf '%p %s bytes\n'
+      - name: Install Blender
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender python3-numpy
+      - name: Convert first FBX/GLTF/GLB to GLB
+        run: |
+          cat > /tmp/convert.py <<'PY'
+          import bpy, pathlib, os, sys
+          root=pathlib.Path("incoming/ancient")
+          candidates=list(root.rglob("*.fbx"))+list(root.rglob("*.glb"))+list(root.rglob("*.gltf"))
+          print("candidates", candidates)
+          if not candidates:
+              raise SystemExit("No FBX/GLB/GLTF found")
+          src=candidates[0]
+          out=pathlib.Path("models/validation/ancient_rigged.glb")
+          out.parent.mkdir(parents=True, exist_ok=True)
+          bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete(use_global=False)
+          if src.suffix.lower()==".fbx":
+              bpy.ops.import_scene.fbx(filepath=str(src))
+          else:
+              bpy.ops.import_scene.gltf(filepath=str(src))
+          objs=list(bpy.context.scene.objects)
+          print("objects", [(o.name,o.type) for o in objs])
+          arms=[o for o in objs if o.type=="ARMATURE"]
+          meshes=[o for o in objs if o.type=="MESH"]
+          print("armatures",len(arms),"meshes",len(meshes))
+          bpy.ops.export_scene.gltf(filepath=str(out),export_format='GLB',export_animations=True)
+          print("exported",out,out.stat().st_size)
+          PY
+          blender -b --python /tmp/convert.py
+      - name: Inspect GLB
+        run: |
+          python - <<'PY'
+          import json,struct
+          p="models/validation/ancient_rigged.glb"
+          d=open(p,"rb").read()
+          n,t=struct.unpack_from("<I4s",d,12)
+          j=json.loads(d[20:20+n].decode().rstrip(" \t\r\n\0"))
+          print("size",len(d),"nodes",len(j.get("nodes",[])),"skins",len(j.get("skins",[])),"animations",[a.get("name") for a in j.get("animations",[])])
+          if not j.get("skins"): raise SystemExit("No skin")
+          PY
+      - name: Commit validation model
+        run: |
+          git config user.name "qinglan-3d-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add models/validation/ancient_rigged.glb
+          git diff --cached --quiet && exit 0
+          git commit -m "asset: add complete rigged ancient character for rapid validation"
+          git push
