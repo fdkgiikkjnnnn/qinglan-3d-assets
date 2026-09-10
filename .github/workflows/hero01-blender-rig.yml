@@ -1,0 +1,38 @@
+name: Blender Rig + Animate Hero01
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/rig_and_animate.py"
+      - ".github/workflows/hero01-blender-rig.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rig:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender
+          blender --version
+      - name: Build rig, animations and sword
+        run: blender -b --python tools/rig_and_animate.py
+      - name: Verify exported GLBs
+        run: |
+          ls -lh models/hero01/hero01_rigged_animated.glb models/sword/sword01.glb
+          test $(stat -c%s models/hero01/hero01_rigged_animated.glb) -gt 100000
+      - name: Commit outputs
+        run: |
+          git config user.name "qinglan-3d-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add models/hero01/hero01_rigged_animated.glb models/sword/sword01.glb
+          git diff --cached --quiet && exit 0
+          git commit -m "asset: rig and animate Hero01 with sword"
+          git push
